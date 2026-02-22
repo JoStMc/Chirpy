@@ -1,4 +1,4 @@
-# Chiy
+# Chirpy
 HTTP Server
 
 ## Chapter 1
