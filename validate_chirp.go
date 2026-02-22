@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
 
@@ -24,7 +25,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusBadRequest, struct{Err string `json:"error"`}{Err: "Chirp is too long"})
 		return
 	} 
-
+	params.Body = replaceBadWords(params.Body)
 	respondWithJSON(w, http.StatusOK, struct{Valid bool `json:"valid"`}{Valid: true})
 }
 
@@ -46,4 +47,20 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(dat)
+} 
+
+func replaceBadWords(msg string) string {
+	words := strings.Split(msg, " ")
+	for i, word := range words {
+		if _, ok := badWords[word]; ok {
+			words[i] = "****"
+		} 
+	} 
+	return strings.Join(words, " ")
+} 
+
+var badWords = map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert": {},
+		"fornax": {},
 } 
