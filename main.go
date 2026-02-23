@@ -32,13 +32,8 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/app/", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
-	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
-	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	cfg.registerHandlers(mux)
 
-	mux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
 
 	server := http.Server{
 	    Handler: mux,
@@ -47,4 +42,15 @@ func main() {
 	log.Println("Serving on port 8080")
 
 	log.Fatal(server.ListenAndServe())
+}
+
+func (cfg *apiConfig) registerHandlers(mux *http.ServeMux) {
+	mux.Handle("/app/", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
+
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("POST /api/chirps", cfg.handlerCreateChirp)
+	mux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
+
+	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
 }
