@@ -30,6 +30,10 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithJSON(w, http.StatusBadRequest, struct{Err string `json:"error"`}{Err: "Chirp is too long"})
 		return
 	} 
+	if len(params.Body) < 1 {
+	    respondWithError(w, http.StatusBadRequest,	"Chirp must be at least 1 character")
+		return
+	} 
 	params.Body = replaceBadWords(params.Body)
 
 	chirp, err := cfg.dbQueries.CreateChirp(context.Background(), database.CreateChirpParams(params))
@@ -37,7 +41,6 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error creating chirp: %v", err))
 		return
 	} 
-
 
 	respondWithJSON(w, http.StatusCreated, Chirp(chirp))
 }

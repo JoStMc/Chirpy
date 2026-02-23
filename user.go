@@ -22,6 +22,11 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	} 
 
+	if len(params.Email) < 1 {
+	    respondWithError(w, http.StatusBadRequest, "Email too short")
+		return
+	} 
+
 	res, err := cfg.dbQueries.CreateUser(context.Background(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error creating user: %v", err))
