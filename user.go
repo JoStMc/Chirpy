@@ -19,6 +19,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	params := parameters{}
 	if err := decoder.Decode(&params); err != nil {
 	    respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
+		return
 	} 
 
 	res, err := cfg.dbQueries.CreateUser(context.Background(), params.Email)

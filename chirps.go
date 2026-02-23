@@ -34,11 +34,43 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	chirp, err := cfg.dbQueries.CreateChirp(context.Background(), database.CreateChirpParams(params))
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, fmt.Sprint("Error creating chirp: %v", err))
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error creating chirp: %v", err))
+		return
 	} 
 
 
 	respondWithJSON(w, http.StatusCreated, Chirp(chirp))
+}
+
+func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.dbQueries.GetAllChirps(context.Background())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error retrieving chirps: %v", err))
+		return
+	} 
+
+	apiChirps := make([]Chirp, len(chirps))
+	for i, c := range chirps {
+	    apiChirps[i] = Chirp(c)
+	} 
+	respondWithJSON(w, http.StatusOK, apiChirps)
+}
+
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprint(err))
+		return
+	} 
+
+	chirp, err := cfg.dbQueries.GetChirps(context.Background(), id)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error retrieving chirps: %v", err))
+		return
+	} 
+
+	apiChirp := Chirp(chirp)
+	respondWithJSON(w, http.StatusOK, apiChirp)
 }
 
 type Chirp struct {
