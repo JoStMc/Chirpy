@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,16 +11,22 @@ import (
 	"github.com/google/uuid"
 )
 
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+} 
+
+type createChirpRequests struct {
+	Body string `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
+}
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
-	} 
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	if err := decoder.Decode(&params); err != nil {
+	params, err := decodeJSON[createChirpRequests](r)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
 		return
 	} 
@@ -75,14 +80,6 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	apiChirp := Chirp(chirp)
 	respondWithJSON(w, http.StatusOK, apiChirp)
 }
-
-type Chirp struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Body      string    `json:"body"`
-	UserID    uuid.UUID `json:"user_id"`
-} 
 
 var badWords = map[string]struct{}{
 		"kerfuffle": {},

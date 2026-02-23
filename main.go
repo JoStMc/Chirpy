@@ -52,6 +52,7 @@ func (cfg *apiConfig) registerHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/chirps", cfg.handlerGetAllChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.handlerGetChirps)
 	mux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
+	mux.HandleFunc("POST /api/login", cfg.handlerLogin)
 
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
