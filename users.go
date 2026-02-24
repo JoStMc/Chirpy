@@ -11,20 +11,20 @@ import (
 	"github.com/google/uuid"
 )
 
-type User struct {
+type createUserResponse struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
 }
 
-type userRequest struct {
+type createUserRequest struct {
 	Email string `json:"email"`
 	Password string `json:"password"`
 } 
 
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
-	params, err := decodeJSON[userRequest](r)
+	params, err := decodeJSON[createUserRequest](r)
 	if err != nil {
 	    respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
 		return
@@ -51,7 +51,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	} 
 
-	response := User{
+	response := createUserResponse{
 	    ID: res.ID,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
@@ -61,11 +61,28 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusCreated, response)
 } 
 
+type loginResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
+}
+
+type loginRequest struct {
+	Email 			 string `json:"email"`
+	Password 		 string `json:"password"`
+	ExpiresInSeconds int `json:"expires_in_seconds"`
+}
+
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
-	params, err := decodeJSON[userRequest](r)
+	params, err := decodeJSON[loginRequest](r)
 	if err != nil {
 	    respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
 		return
+	} 
+	if params.ExpiresInSeconds < 0 || params.ExpiresInSeconds > 3600 {
+	    params.ExpiresInSeconds = 3600
 	} 
 
 	user, err := cfg.dbQueries.GetUser(context.Background(), params.Email)
@@ -75,11 +92,19 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	} 
 
-	response := User{
+	expireTime := time.Duration(params.ExpiresInSeconds) * time.Second
+	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expireTime)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Unable to create token: %v", err))
+		return
+	} 
+
+	response := loginResponse{
 	    ID: user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email: user.Email,
+		Token: token,
 	} 
 	respondWithJSON(w, http.StatusOK, response)
 } 

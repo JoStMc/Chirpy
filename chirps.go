@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JoStMc/Chirpy/internal/auth"
 	"github.com/JoStMc/Chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -40,6 +41,20 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	} 
 	params.Body = replaceBadWords(params.Body)
+
+	bearerToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+	    respondWithError(w, http.StatusUnauthorized, fmt.Sprint(err))
+		return
+	} 
+	bearerID, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Access denied: %v", err))
+	} 
+	if bearerID != params.UserID {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Access denied"))
+		return
+	} 
 
 	chirp, err := cfg.dbQueries.CreateChirp(context.Background(), database.CreateChirpParams(params))
 	if err != nil {
