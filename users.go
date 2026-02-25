@@ -62,17 +62,17 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 } 
 
 type loginResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID        	 uuid.UUID `json:"id"`
+	CreatedAt 	 time.Time `json:"created_at"`
+	UpdatedAt 	 time.Time `json:"updated_at"`
+	Email     	 string    `json:"email"`
+	Token     	 string    `json:"token"`
+	RefreshToken string	   `json:"refresh_token"`
 }
 
 type loginRequest struct {
 	Email 			 string `json:"email"`
 	Password 		 string `json:"password"`
-	ExpiresInSeconds int `json:"expires_in_seconds"`
 }
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -81,21 +81,28 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	    respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
 		return
 	} 
-	if params.ExpiresInSeconds < 0 || params.ExpiresInSeconds > 3600 {
-	    params.ExpiresInSeconds = 3600
-	} 
+	ctx := context.Background()
 
-	user, err := cfg.dbQueries.GetUser(context.Background(), params.Email)
+	user, err := cfg.dbQueries.GetUser(ctx, params.Email)
 	passwordMatches, _ := auth.CheckPasswordHash(params.Password, user.HashedPassword)
 	if err != nil || !passwordMatches{
 	    respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
 		return
 	} 
 
-	expireTime := time.Duration(params.ExpiresInSeconds) * time.Second
-	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expireTime)
+	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, 3600 * time.Second)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Unable to create token: %v", err))
+		return
+	} 
+
+	refreshToken := auth.MakeRefreshToken()
+	_, err = cfg.dbQueries.CreateRefreshToken(ctx, database.CreateRefreshTokenParams{
+		Token: refreshToken,
+		UserID: user.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating refresh token: %v", err))
 		return
 	} 
 
@@ -105,6 +112,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: user.UpdatedAt,
 		Email: user.Email,
 		Token: token,
+		RefreshToken: refreshToken,
 	} 
 	respondWithJSON(w, http.StatusOK, response)
 } 
