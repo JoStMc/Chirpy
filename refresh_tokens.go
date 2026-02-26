@@ -1,11 +1,9 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/JoStMc/Chirpy/internal/auth"
@@ -22,7 +20,7 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	} 
 
-	ctx := context.Background()
+	ctx := r.Context()
 	userTokens, err := cfg.dbQueries.GetUserFromRefreshToken(ctx, token)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "invalid token")
@@ -34,7 +32,7 @@ func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	} 
 
-	jwtoken, err := auth.MakeJWT(userTokens.UserID, os.Getenv("TOKEN_SECRET"), 3600 * time.Second)
+	jwtoken, err := auth.MakeJWT(userTokens.UserID, cfg.jwtSecret, 3600 * time.Second)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error generating token: %v", err))
 		return
@@ -53,7 +51,7 @@ func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
 		return
 	} 
 
-	ctx := context.Background()
+	ctx := r.Context()
 	err = cfg.dbQueries.RevokeRefreshToken(ctx, token)
 	if err != nil && err != sql.ErrNoRows {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error revoking token: %v", err))

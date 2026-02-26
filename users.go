@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -45,7 +45,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		Email: params.Email,
 		HashedPassword: hashedPass,
 	} 
-	res, err := cfg.dbQueries.CreateUser(context.Background(), hashedParams)
+	res, err := cfg.dbQueries.CreateUser(r.Context(), hashedParams)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error creating user: %v", err))
 		return
@@ -81,7 +81,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	    respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
 		return
 	} 
-	ctx := context.Background()
+	ctx := r.Context()
 
 	user, err := cfg.dbQueries.GetUser(ctx, params.Email)
 	passwordMatches, _ := auth.CheckPasswordHash(params.Password, user.HashedPassword)
@@ -116,3 +116,74 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	} 
 	respondWithJSON(w, http.StatusOK, response)
 } 
+
+type updateUserResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+} 
+
+type updateUserRequest struct {
+	Email 	 *string `json:"email"`
+	Password *string `json:"password"`
+} 
+
+func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Error getting user token: %v", err))
+		return
+	} 
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+	    respondWithError(w, http.StatusUnauthorized, "Invalid token")
+		return
+	} 
+
+	params, err := decodeJSON[updateUserRequest](r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Error decoding parameters: %v", err))
+		return
+	} 
+	ctx := r.Context()
+
+	emailArg := sql.NullString{Valid: false}
+	hashedPassword := sql.NullString{Valid: false}
+
+	if params.Email != nil {
+	    emailArg.String = *params.Email
+	    emailArg.Valid = true
+	} 
+	if params.Password != nil {
+		hashedPassword.Valid = true
+		hashedPassword.String, err = auth.HashPassword(*params.Password)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error hashing password: %v", err))
+			return
+		} 
+	} 
+
+	if !hashedPassword.Valid && !emailArg.Valid {
+	    respondWithError(w, http.StatusBadRequest, "Email and password not provided")
+		return
+	} 
+
+	updatedUser, err := cfg.dbQueries.UpdateUser(ctx, database.UpdateUserParams{
+		ID: userID,
+		Email: emailArg,
+		HashedPassword: hashedPassword,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error updating user: %v", err))
+		return
+	} 
+
+	response := updateUserResponse{
+		ID: userID,
+		Email: updatedUser.Email,
+		CreatedAt: updatedUser.CreatedAt,
+		UpdatedAt: updatedUser.UpdatedAt,
+	}
+	respondWithJSON(w, http.StatusOK, response)
+}
