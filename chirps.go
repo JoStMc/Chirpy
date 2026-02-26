@@ -24,7 +24,7 @@ type createChirpRequests struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	params, err := decodeJSON[createChirpRequests](r)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error decoding parameters: %v", err))
@@ -78,14 +78,14 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 	respondWithJSON(w, http.StatusOK, apiChirps)
 }
 
-func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprint(err))
 		return
 	} 
 
-	chirp, err := cfg.dbQueries.GetChirps(r.Context(), id)
+	chirp, err := cfg.dbQueries.GetChirp(r.Context(), id)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error retrieving chirps: %v", err))
 		return
@@ -109,4 +109,41 @@ func replaceBadWords(msg string) string {
 		} 
 	} 
 	return strings.Join(words, " ")
+} 
+
+
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	chirpId, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+	    respondWithError(w, http.StatusBadRequest, fmt.Sprint(err))
+		return
+	} 
+	chirp, err := cfg.dbQueries.GetChirp(r.Context(), chirpId)
+	if err != nil {
+	    respondWithError(w, http.StatusNotFound, "chirp not found")
+		return
+	} 
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Error getting user token: %v", err))
+		return
+	} 
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+	    respondWithError(w, http.StatusUnauthorized, "Invalid token")
+		return
+	} 
+
+	if chirp.UserID != userID {
+	    respondWithError(w, http.StatusForbidden, "cannot delete chirp")
+		return
+	} 
+
+	err = cfg.dbQueries.DeleteChirp(r.Context(), chirpId)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error deleting chirp: %v", err))
+		return
+	} 
+
+	w.WriteHeader(http.StatusNoContent)
 } 
