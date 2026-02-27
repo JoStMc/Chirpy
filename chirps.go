@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -73,6 +74,8 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 		return
 	} 
 
+
+
 	chirps, err := cfg.dbQueries.GetAllChirps(r.Context(), authorIdString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error retrieving chirps: %v", err))
@@ -83,6 +86,11 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 	for i, c := range chirps {
 		apiChirps[i] = Chirp(c)
 	} 
+
+	if r.URL.Query().Get("sort") == "desc" {
+		slices.Reverse(apiChirps)
+	} 
+
 	respondWithJSON(w, http.StatusOK, apiChirps)
 }
 
