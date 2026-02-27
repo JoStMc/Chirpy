@@ -12,10 +12,11 @@ import (
 )
 
 type createUserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID        	uuid.UUID `json:"id"`
+	CreatedAt 	time.Time `json:"created_at"`
+	UpdatedAt 	time.Time `json:"updated_at"`
+	Email     	string    `json:"email"`
+	IsChirpyRed bool	  `json:"is_chirpy_red"`
 }
 
 type createUserRequest struct {
@@ -55,6 +56,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	    ID: res.ID,
 		CreatedAt: res.CreatedAt,
 		UpdatedAt: res.UpdatedAt,
+		IsChirpyRed: res.IsChirpyRed,
 		Email: res.Email,
 	} 
 
@@ -66,6 +68,7 @@ type loginResponse struct {
 	CreatedAt 	 time.Time `json:"created_at"`
 	UpdatedAt 	 time.Time `json:"updated_at"`
 	Email     	 string    `json:"email"`
+	IsChirpyRed  bool	   `json:"is_chirpy_red"`
 	Token     	 string    `json:"token"`
 	RefreshToken string	   `json:"refresh_token"`
 }
@@ -110,6 +113,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	    ID: user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
+		IsChirpyRed: user.IsChirpyRed,
 		Email: user.Email,
 		Token: token,
 		RefreshToken: refreshToken,
@@ -118,10 +122,11 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 } 
 
 type updateUserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	IsChirpyRed bool	  `json:"is_chirpy_red"`
+	Email       string    `json:"email"`
 } 
 
 type updateUserRequest struct {
@@ -182,6 +187,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 	response := updateUserResponse{
 		ID: userID,
 		Email: updatedUser.Email,
+		IsChirpyRed: updatedUser.IsChirpyRed,
 		CreatedAt: updatedUser.CreatedAt,
 		UpdatedAt: updatedUser.UpdatedAt,
 	}

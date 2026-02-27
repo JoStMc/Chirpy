@@ -63,23 +63,33 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 } 
 
 
+func MakeRefreshToken() string {
+	key := make([]byte, 32)
+	rand.Read(key)
+	return hex.EncodeToString(key)
+} 
+
+
 func GetBearerToken(headers http.Header) (string, error) {
+	return getAuthKey(headers, "Bearer")
+}
+
+
+func GetAPIKey(headers http.Header) (string, error) {
+	return getAuthKey(headers, "ApiKey")
+} 
+
+func getAuthKey(headers http.Header, prefix string) (string, error) {
 	authString := headers.Get("Authorization")
 	if authString == "" {
 	    return "", fmt.Errorf("authorization token not found")
 	} 
 
 	splitAuthString := strings.Fields(authString)
-	if splitAuthString[0] != "Bearer" || len(splitAuthString) != 2 {
-	    return "", fmt.Errorf("authorization token not found")
+	if len(splitAuthString) != 2 || splitAuthString[0] != prefix  {
+	    return "", fmt.Errorf("authorization key not found")
 	} 
 
 	return splitAuthString[1], nil
-}
-
-
-func MakeRefreshToken() string {
-	key := make([]byte, 32)
-	rand.Read(key)
-	return hex.EncodeToString(key)
+    
 } 

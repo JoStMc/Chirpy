@@ -14,6 +14,7 @@ import (
 
 type apiConfig struct {
 	jwtSecret string
+	polkaKey string
 	dbQueries *database.Queries
 	fileserverHits atomic.Int32
 } 
@@ -29,6 +30,7 @@ func main() {
 
 	cfg := apiConfig{
 		jwtSecret: os.Getenv("TOKEN_SECRET"),
+		polkaKey: os.Getenv("POLKA_KEY"),
 		dbQueries: database.New(db),
 		fileserverHits: atomic.Int32{},
 	}
@@ -59,6 +61,8 @@ func (cfg *apiConfig) registerHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
 	mux.HandleFunc("PUT /api/users", cfg.handlerUpdateUser)
 	mux.HandleFunc("POST /api/login", cfg.handlerLogin)
+
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.handlerUpgradeUser)
 
 	mux.HandleFunc("POST /api/refresh", cfg.handlerRefresh)
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevoke)
