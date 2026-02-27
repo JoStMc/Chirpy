@@ -36,14 +36,14 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	} 
 	if len(params.Body) < 1 {
-	    respondWithError(w, http.StatusBadRequest,	"Chirp must be at least 1 character")
+		respondWithError(w, http.StatusBadRequest,	"Chirp must be at least 1 character")
 		return
 	} 
 	params.Body = replaceBadWords(params.Body)
 
 	bearerToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-	    respondWithError(w, http.StatusUnauthorized, fmt.Sprint(err))
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprint(err))
 		return
 	} 
 	bearerID, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
@@ -51,7 +51,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Access denied: %v", err))
 	} 
 	if bearerID != params.UserID {
-		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("Access denied"))
+		respondWithError(w, http.StatusUnauthorized, "Access denied")
 		return
 	} 
 
@@ -65,7 +65,15 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.dbQueries.GetAllChirps(r.Context())
+	authorIdString := r.URL.Query().Get("author_id")
+	fmt.Printf("rawquery=%q author_id=%q\n", r.URL.RawQuery, authorIdString)
+	_, err := uuid.Parse(authorIdString)
+	if authorIdString != "" && err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid user id")
+		return
+	} 
+
+	chirps, err := cfg.dbQueries.GetAllChirps(r.Context(), authorIdString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error retrieving chirps: %v", err))
 		return
@@ -73,7 +81,7 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 
 	apiChirps := make([]Chirp, len(chirps))
 	for i, c := range chirps {
-	    apiChirps[i] = Chirp(c)
+		apiChirps[i] = Chirp(c)
 	} 
 	respondWithJSON(w, http.StatusOK, apiChirps)
 }
@@ -96,9 +104,9 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 var badWords = map[string]struct{}{
-		"kerfuffle": {},
-		"sharbert": {},
-		"fornax": {},
+	"kerfuffle": {},
+	"sharbert": {},
+	"fornax": {},
 } 
 
 func replaceBadWords(msg string) string {
@@ -115,12 +123,12 @@ func replaceBadWords(msg string) string {
 func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
 	chirpId, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
-	    respondWithError(w, http.StatusBadRequest, fmt.Sprint(err))
+		respondWithError(w, http.StatusBadRequest, fmt.Sprint(err))
 		return
 	} 
 	chirp, err := cfg.dbQueries.GetChirp(r.Context(), chirpId)
 	if err != nil {
-	    respondWithError(w, http.StatusNotFound, "chirp not found")
+		respondWithError(w, http.StatusNotFound, "chirp not found")
 		return
 	} 
 	token, err := auth.GetBearerToken(r.Header)
@@ -130,12 +138,12 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request)
 	} 
 	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
 	if err != nil {
-	    respondWithError(w, http.StatusUnauthorized, "Invalid token")
+		respondWithError(w, http.StatusUnauthorized, "Invalid token")
 		return
 	} 
 
 	if chirp.UserID != userID {
-	    respondWithError(w, http.StatusForbidden, "cannot delete chirp")
+		respondWithError(w, http.StatusForbidden, "cannot delete chirp")
 		return
 	} 
 

@@ -5,6 +5,7 @@ RETURNING *;
 
 -- name: GetAllChirps :many
 SELECT * FROM chirps
+WHERE (sqlc.arg(user_id) = '' OR user_id = sqlc.arg(user_id)::uuid)
 ORDER BY created_at ASC;
 
 -- name: GetChirp :one
