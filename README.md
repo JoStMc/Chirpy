@@ -56,3 +56,55 @@ It's the convention to name the end points after resources, which will typically
 - `/admin/reset` (POST)
 
 The method is what defines how the server should respond. For example, a client can send a request to `/api/chirps`. Depending on whether this is a POST or a GET request, the server retrieves the chirps or creates a new chirp (singular), to provide consistent CRUD endpoints.
+
+
+## Chapter 6, Authentication
+
+### Hashing passwords
+
+To hash passwords, [argon2id](https://github.com/alexedwards/argon2id) is used here: `argon2id.CreateHash(password, argon2id.DefaultParams)` and `argon2id.ComparePasswordAndHash(password, hash)` are sufficient. 
+
+### Types of Authentication
+
+1. Password + ID
+2. 3rd Party Authentication
+3. Magic Links
+4. API Keys
+
+All have their self-explanatory pros and cons.
+
+### JWTs
+
+A JWT is a JSON Web Token. This is a cryptographically signed JSON object containing information about the user.
+
+The process is as follows:
+
+1. The user logs in. (ex. `POST api/login`)
+2. The server does `CheckPaswordHash` to log user with `userID` in. 
+3. The server creates a JWT (`MakeJWT`) and sends it to the client
+4. The user makes an API request.
+5. The user's token is sent with any request it makes (e.g. in a header "Authorization" with body like "Bearer <token>").
+6. The server validates the JWT (`ValidateJWT`) to ensure that who is claiming to send the message is sending the message.
+
+So the token generation is unique to the server, a `TOKEN_SECRET` is defined in `.env`, which is just a random string.
+
+JWTs are short-lived, stateless, and irrevocable, meaning the server doesn't need to keep track of them. They are short-lived because, since they are irrevocable, if a JWT is stolen, they can be used by anyone. To overcome the issue of them being short-lived, so users don't have to login in every time they make a new request each hour, refresh tokens can be used.
+
+### Refresh Tokens
+
+Refresh tokens are stateful, last longer, and can be revoked. All they do are make new JWTs. 
+
+In our case, refresh tokens are made with user login, lasting 60 days. Whenever a JWT expires, a `POST /api/refresh/` request can be made using the refresh token in the headers, given that the refresh token hasn't expired or been revoked.
+
+
+## Chapter 7, Authorization
+
+Authorization simply refers to what the user is allowed to do. For example, a user is authorized to post a chirp with a user ID which is their user ID, but not another user's. This is done by getting the user ID of the JWT bearer to check that it matches the user ID in the request.
+
+## Chapter 8, Webhooks
+
+Webhooks are just idempotent HTTP requests where the client is an automated system.
+
+For example, if we use an external service to accept payments, when a user sends a payment, the service makes a request to an exposed HTTP input, like `/api/polka/webhooks` (where `polka` is the service which accepts payments). The main difference is that the client defines the API contract.
+
+The webhook can be made secure by defining an API Key in `.env`.
