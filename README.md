@@ -1,6 +1,46 @@
 # Chirpy
 HTTP Server
 
+---
+
+Chirpy is a HTTP server which handles the back-end of a social media network. The functionality is basic, with the ability to create user accounts and users to create "chirps" (posts). 
+
+Here is a rough outline of the HTTP inputs (to be updated):
+
+- Health: `GET /api/healthz`: returns OK in plain text.
+
+- Chirps:
+  - `GET /api/chirps`: Returns a list of chirps with optional query parameters `author_id` (which takes a user ID and returns chirps made by that user) and `sort` (which takes `asc` or `desc`, with default `asc`, sorting by date posted).
+  - `POST /api/chirps`: Takes a JSON object with "body" and "user_id", with HTTP header "Authorization" of the shape "Bearer <token>" to create a chirp under the user `user_id` with the contents of `body`.
+  - `GET /api/chirps/{chirpID}`: Returns chirp with ID `chirpID`.
+  - `DELETE /api/chirps/{chirpID}`: Deletes the chirp with ID `chirpID`, given that the user has authorization to, using the header "Authorization" of the shape "Bearer <token>".
+
+- Users: 
+  - `POST /api/users`: Takes a JSON object with "email" and "password" to create a user.
+  - `PUT /api/users`: Takes a JSON object with optional strings "email" and "password" to update the email and/or password of the user who bears the token in the header "Authorization: Bearer <token>".
+  - `POST /api/login`: Takes a JSON object with "email" and "password" to login to a user: returns the user, including the JWT in "token" and refresh token "refresh_token". 
+
+- Webhook: `POST /api/polka/webhooks`: Takes a JSON object of the form: 
+```json
+{
+  "event": "user.upgraded",
+  "data": {
+    "user_id": "3311741c-680c-4546-99f3-fc9efac2036c"
+  }
+}
+```
+to upgrade the user to "Chirpy Red", the premium version. To authorize, the API Key must be passed in the "Authorization" header, like "ApiKey f271c81ff7084ee5b99a5091b42d486e".
+
+- Refresh Tokens;
+  - `POST /api/refresh`: Returns a new JWT for the user who bears the refresh token in the header "Authorization: Bearer <token>".
+  - `POST /api/revoke`: Revokes the refresh token in the header "Authorization: Bearer <token>".
+
+- Admin:
+  - `GET /admin/metrics`: Returns the number of times clients have made requests to pages with metrics included (currently only `/app`).
+  - `POST /admin/reset`: Resets the databases and metrics.
+
+---
+
 ## Chapter 1, Servers
 
 | Component | Function |
